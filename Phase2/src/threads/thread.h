@@ -98,7 +98,10 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
+    struct list_elem allelem;/* List element for all threads list. */
+    struct list_elem sleepingelem;/* List element for all threads list. */
+    int remaining_time_to_wake_up;
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list user_files ;            /* Files opened by thread */
@@ -157,6 +160,11 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
- 
+
+void sleep_thread(int64_t ticks);
+bool compare_threads_by_priority_sleeping(const struct list_elem *a,
+                                          const struct list_elem *b,
+                                          void *aux UNUSED);
+
 #endif /* threads/thread.h */
  

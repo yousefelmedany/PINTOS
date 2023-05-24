@@ -14,8 +14,8 @@
 
 struct lock write_lock;
 
-void wrapper_write(struct intr_frame *f);
-void wrapper_read(struct intr_frame *f);
+void write_handler(struct intr_frame *f);
+void read_handler(struct intr_frame *f);
 void wrapper_close(struct intr_frame *f);
 void wrapper_open(struct intr_frame *f);
 void wrapper_create(struct intr_frame *f);
@@ -41,7 +41,7 @@ syscall_handler (struct intr_frame *f) {
     if(!valid_esp(f)) {
         exit(-1);
     }
-
+    
     switch(*(int*)f->esp) {
         case SYS_HALT: {
             halt();
@@ -61,7 +61,7 @@ syscall_handler (struct intr_frame *f) {
             break;
         }
         case SYS_WRITE: {
-            wrapper_write(f);
+            write_handler(f);
             break;
         }case SYS_CREATE:{
             wrapper_create(f);
@@ -74,7 +74,7 @@ syscall_handler (struct intr_frame *f) {
             break;
         }
         case SYS_READ :{
-            wrapper_read(f);
+            read_handler(f);
             break;
         }case SYS_FILESIZE:{
 
@@ -155,7 +155,7 @@ void get_size(struct intr_frame *f){
     }
 }
 // check the parametar (fd and buffer  and if they are valid then call read function otherwise exit
-void wrapper_read(struct intr_frame *f){
+void read_handler(struct intr_frame *f){
     int fd = (int ) (*((int *) f->esp + 1));
     char * buffer = (char * ) (*((int *) f->esp + 2));
     if(fd==1 || !valid(buffer)){
@@ -267,7 +267,7 @@ int  create(char * file_name,int initial_size){
     return res;
 }
 // check paramater (fd and poitner to buffer )and if they are valid call write function otherwise exit
-void wrapper_write(struct intr_frame *f){
+void write_handler(struct intr_frame *f){
     int fd = *((int *) f->esp + 1);
     char *buffer = (char *) (*((int *) f->esp + 2));
     if(!valid(buffer) || fd ==0){

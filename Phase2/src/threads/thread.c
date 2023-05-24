@@ -27,6 +27,8 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
  
+static struct list sleeping_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
  
@@ -91,6 +93,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleeping_list);
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -135,6 +138,29 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+  struct list_elem *e = list_begin(&sleeping_list);
+  struct list_elem *temp;
+
+  while (e != list_end(&sleeping_list))
+  {
+    struct thread *t = list_entry(e, struct thread, sleepingelem);
+    temp = e;
+    e = list_next(e);
+
+    ASSERT(t->status == THREAD_BLOCKED);
+
+    if (t->remaining_time_to_wake_up > 0)
+    {
+      t->remaining_time_to_wake_up--;
+      if (t->remaining_time_to_wake_up <= 0)
+      {
+        thread_unblock(t);
+        list_remove(temp);
+      }
+    }
+  }
+
 }
  
 /* Prints thread statistics. */
@@ -462,6 +488,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
  
+  t->remaining_time_to_wake_up=0;
   sema_init(&t->wait_for_child,0);
   sema_init(&t->parent_child_sync,0);
   list_init(&t->children);
@@ -595,3 +622,23 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
  
+void sleep_thread(int64_t ticks)
+{
+  struct thread *cur = thread_current();
+  cur->remaining_time_to_wake_up = ticks;
+  enum intr_level old_level = intr_disable();
+  list_insert_ordered(&sleeping_list, &cur->sleepingelem, compare_threads_by_priority_sleeping, NULL);  
+  intr_set_level(old_level);
+  thread_block();
+}
+
+bool compare_threads_by_priority_sleeping(const struct list_elem *a,
+                                          const struct list_elem *b,
+                                          void *aux UNUSED)
+{
+  struct thread *thread_a = list_entry(a, struct thread, sleepingelem);
+  struct thread *thread_b = list_entry(b, struct thread, sleepingelem);
+  return thread_a->priority > thread_b->priority;
+}
+
+
