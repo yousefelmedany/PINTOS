@@ -133,8 +133,8 @@ start_process(void *file_name_)
    does nothing. */
 int process_wait(tid_t tid)
 {
+  
   /*----------------------------------------------------------------------*/
-
   // Set waiting_for_child to tid (thread to wait for) which is given as argument
   thread_current()->waiting_for_child = tid;
   // Get child with given tid (if exists)
@@ -639,7 +639,6 @@ void push_into_stack(char *file_name, void **esp, char **save_ptr)
   *(int **)stack_pointer = NULL;
 
   *esp = stack_pointer;
-  
 }
 
 
