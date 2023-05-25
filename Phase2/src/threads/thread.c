@@ -490,12 +490,12 @@ init_thread (struct thread *t, const char *name, int priority)
  
   t->remaining_time_to_wake_up=0;
   sema_init(&t->wait_for_child,0);
-  sema_init(&t->parent_child_sync,0);
+  sema_init(&t->synchronized_wait_for_child,0);
   list_init(&t->children);
   list_init(&t->user_files);
-  t->waiting_for = -1;
-  t->child_status = -1;
-  t->child_creation_success = 0;
+  t->waiting_for_child = -1;
+  t->child_exit_status = -1;
+  t->create_child_done = 0;
   t->exit_status = 0;
   if(t != initial_thread) {
       t->parent = thread_current();
