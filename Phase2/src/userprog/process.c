@@ -639,6 +639,7 @@ void push_into_stack(char *file_name, void **esp, char **save_ptr)
   *(int **)stack_pointer = NULL;
 
   *esp = stack_pointer;
+  
 }
 
 

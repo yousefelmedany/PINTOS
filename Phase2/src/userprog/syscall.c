@@ -16,7 +16,7 @@ static void syscall_handler(struct intr_frame *f);
 
 /*--------------------------------------------------------------------*/
 //create a lock for write to file which is shared between all threads
-struct lock lock_for_write;
+struct lock lock_for_fileaccess;
 /*--------------------------------------------------------------------*/
 
 void syscall_init(void)
@@ -24,7 +24,7 @@ void syscall_init(void)
     intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
     /*--------------------------------------------*/
     // init the lock
-    lock_init(&lock_for_write);
+    lock_init(&lock_for_fileaccess);
     /*--------------------------------------------*/
 }
 
@@ -131,9 +131,9 @@ void remove_handler(struct intr_frame *f)
 int remove(char *file_name)
 {
     int res = -1;
-    lock_acquire(&lock_for_write);
+    lock_acquire(&lock_for_fileaccess);
     res = filesys_remove(file_name);
-    lock_release(&lock_for_write);
+    lock_release(&lock_for_fileaccess);
     return res;
 }
 
@@ -148,9 +148,9 @@ void tell(struct intr_frame *f)
     }
     else
     {
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         f->eax = file_tell(file->file);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
     }
 }
 
@@ -166,10 +166,10 @@ void seek(struct intr_frame *f)
     }
     else
     {
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         file_seek(file->file, pos);
         f->eax = pos;
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
     }
 }
 // take the fd for the file , and return it's size
@@ -183,9 +183,9 @@ void get_size(struct intr_frame *f)
     }
     else
     {
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         f->eax = file_length(file->file);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
     }
 }
 // check the parametar (fd and buffer  and if they are valid then call read function otherwise exit
@@ -210,9 +210,9 @@ int read(int fd, char *buffer, unsigned size)
         // stdin .. so get the data with input_getc
         while (size--)
         {
-            lock_acquire(&lock_for_write);
+            lock_acquire(&lock_for_fileaccess);
             char c = input_getc();
-            lock_release(&lock_for_write);
+            lock_release(&lock_for_fileaccess);
             buffer += c;
         }
         return res;
@@ -231,9 +231,9 @@ int read(int fd, char *buffer, unsigned size)
     else
     {
         struct file *file = user_file->file;
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         size = file_read(file, buffer, size);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
         return size;
     }
 }
@@ -254,9 +254,9 @@ int close(int fd)
     struct user_file *file = get_file(fd);
     if (file != NULL)
     {
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         file_close(file->file);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
         list_remove(&file->elem);
         return 1;
     }
@@ -278,9 +278,9 @@ void open_handler(struct intr_frame *f)
 int open(char *file_name)
 {
     static unsigned long curent_fd = 2;
-    lock_acquire(&lock_for_write);
+    lock_acquire(&lock_for_fileaccess);
     struct file *opened_file = filesys_open(file_name);
-    lock_release(&lock_for_write);
+    lock_release(&lock_for_fileaccess);
 
     if (opened_file == NULL)
     {
@@ -293,9 +293,9 @@ int open(char *file_name)
         int file_fd = curent_fd;
         user_file->fd = curent_fd;
         user_file->file = opened_file;
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         curent_fd++;
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
         struct list_elem *elem = &user_file->elem;
         list_push_back(&thread_current()->user_files, elem);
         return file_fd;
@@ -316,9 +316,9 @@ void create_handler(struct intr_frame *f)
 int create(char *file_name, int initial_size)
 {
     int res = 0;
-    lock_acquire(&lock_for_write);
+    lock_acquire(&lock_for_fileaccess);
     res = filesys_create(file_name, initial_size);
-    lock_release(&lock_for_write);
+    lock_release(&lock_for_fileaccess);
     return res;
 }
 // check paramater (fd and poitner to buffer )and if they are valid call write function otherwise exit
@@ -343,9 +343,9 @@ int write(int fd, char *buffer, unsigned size)
     }
     else if (fd == 1)
     {
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         putbuf(buffer, size);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
         return size;
     }
 
@@ -357,9 +357,9 @@ int write(int fd, char *buffer, unsigned size)
     else
     {
         int res = 0;
-        lock_acquire(&lock_for_write);
+        lock_acquire(&lock_for_fileaccess);
         res = file_write(file->file, buffer, size);
-        lock_release(&lock_for_write);
+        lock_release(&lock_for_fileaccess);
         return res;
     }
 }
